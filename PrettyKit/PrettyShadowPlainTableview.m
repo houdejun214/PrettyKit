@@ -49,7 +49,7 @@
     PrettyShadowPlainTableview *view = [[PrettyShadowPlainTableview alloc] initWithFrame:CGRectMake(0, 0, 0, view_height)];
     view->_position = position;
     
-    return [view autorelease];
+    return view;
 }
 
 
@@ -85,19 +85,6 @@
 
 + (float) height {
     return view_height;
-}
-
-@end
-
-
-@implementation UITableView (PrettyKitTableViewShadows)
-
-- (void) dropShadows
-{
-    if (self.style == UITableViewStylePlain)
-    {
-        [PrettyShadowPlainTableview setUpTableView:self];
-    }
 }
 
 @end

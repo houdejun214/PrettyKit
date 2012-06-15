@@ -31,7 +31,7 @@
 
 
 /** `PrettyNavigationBar` is a subclass of `UINavigationBar` that removes the
- glossy effect and lets you customize its colors and corners.
+ glossy effect and lets you customize its colors.
  
  ![](../docs/Screenshots/blue_navbar.png)
  
@@ -42,7 +42,6 @@
  - gradient end color
  - top line volor
  - bottom line color
- - corner radius
 
  */
 @interface PrettyNavigationBar : UINavigationBar
@@ -56,31 +55,31 @@
 /** Specifies the gradient's start color.
  
  By default is a blue tone. */
-@property (nonatomic, retain) UIColor *gradientStartColor;
+@property (nonatomic, strong) UIColor *gradientStartColor;
 
 /** Specifies the gradient's end color.
  
  By default is a blue tone. */
-@property (nonatomic, retain) UIColor *gradientEndColor;
+@property (nonatomic, strong) UIColor *gradientEndColor;
 
 /** Specifies the gradient's top line color.
  
  By default is a blue tone. */
-@property (nonatomic, retain) UIColor *topLineColor;
+@property (nonatomic, strong) UIColor *topLineColor;
 
 /** Specifies the gradient's bottom line color.
  
  By default is a blue tone. */
-@property (nonatomic, retain) UIColor *bottomLineColor;
+@property (nonatomic, strong) UIColor *bottomLineColor;
 
 /** Specifies the background color for the rounded corners.
  
  By default is a black tone. */
-@property (nonatomic, retain) UIColor *roundedCornerColor;
+@property (nonatomic, strong) UIColor *roundedCornerColor;
 
 /** Specifies the radius for the rounded corners.
  
- By default it is 0.0 which means there is no rounded corners. */
+ By default it is 0.0 which means there is no rounded corners */
 @property (readwrite) CGFloat roundedCornerRadius;
 
 @end

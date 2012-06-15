@@ -82,7 +82,7 @@ typedef enum {
 
 @interface PrettyTableViewCellBackground : UIView
 
-@property (nonatomic, assign) PrettyTableViewCell *cell;
+@property (nonatomic, weak) PrettyTableViewCell *cell;
 @property (nonatomic, assign) CellBackgroundBehavior behavior;
 
 - (id) initWithFrame:(CGRect)frame behavior:(CellBackgroundBehavior)behavior;
@@ -204,43 +204,13 @@ typedef enum {
     CGContextRestoreGState(ctx);
 }
 
-- (void) fixShadow:(CGContextRef)ctx rect:(CGRect)rect
-{
-    if (self.cell.position == PrettyTableViewCellPositionTop || self.cell.position == PrettyTableViewCellPositionAlone)
-    {
-        return;
-    }
-    
-    CGContextSaveGState(ctx);
-    CGContextMoveToPoint(ctx, CGRectGetMinX(rect), CGRectGetMinY(rect));
-    CGContextAddLineToPoint(ctx, CGRectGetMaxX(rect), CGRectGetMinY(rect));
-    CGContextSetStrokeColorWithColor(ctx, self.cell.borderColor.CGColor);
-    CGContextSetLineWidth(ctx, 5);
-
-    UIColor *shadowColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:self.cell.shadowOpacity];
-    CGContextSetShadowWithColor(ctx, CGSizeMake(0, -1), 3, shadowColor.CGColor);
-
-    CGContextStrokePath(ctx);
-    
-    CGContextRestoreGState(ctx);
-
-}
 
 - (void) drawBorder:(CGRect)rect shadow:(BOOL)shadow 
 {
-    float shadowShift = 0.5 * self.cell.dropsShadow;
-    
-    CGRect innerRect = CGRectMake(rect.origin.x+shadowShift, rect.origin.y+shadowShift,
-                                  rect.size.width-shadowShift*2, rect.size.height-shadowShift*2);
+    CGRect innerRect = CGRectMake(rect.origin.x+0.5, rect.origin.y+0.5,
+                                  rect.size.width-1, rect.size.height-1);
     
     CGContextRef ctx = UIGraphicsGetCurrentContext();
-    
-    if (shadow) 
-    {
-        [self fixShadow:ctx rect:innerRect];
-    }
-
-    
     CGContextSaveGState(ctx);
 
     // draws body
@@ -253,7 +223,7 @@ typedef enum {
         CGContextSetShadowWithColor(ctx, CGSizeMake(0, 1), 3, shadowColor.CGColor);
     }   
     CGContextSetStrokeColorWithColor(ctx, self.cell.borderColor.CGColor);
-    CGContextSetLineWidth(ctx, 2 - shadowShift);
+    CGContextSetLineWidth(ctx, 1.5);
     CGContextStrokePath(ctx);
     
     CGContextRestoreGState(ctx);
@@ -292,16 +262,27 @@ typedef enum {
 {
     CGRect rect = [self innerFrame:initialRect];
     
-    [self drawBorder:rect shadow:self.cell.dropsShadow];
+    float lineXSpan = 0;
+    if (self.cell.dropsShadow) {
+        [self drawBorder:rect shadow:YES];
+    }
+    else {
+        lineXSpan += 0.5;
+    }
     
     [self drawBackground:rect];
     
     if (self.cell.position == PrettyTableViewCellPositionTop
         || self.cell.position == PrettyTableViewCellPositionMiddle)
     {
-        [self drawLineSeparator:CGRectMake(rect.origin.x, rect.origin.y,
-                                           rect.size.width, rect.size.height)];
+        [self drawLineSeparator:CGRectMake(rect.origin.x+lineXSpan, rect.origin.y,
+                                           rect.size.width-lineXSpan*2, rect.size.height)];
     } 
+
+    if ([self.cell tableViewIsGrouped] && !self.cell.dropsShadow) 
+    {
+        [self drawBorder:rect shadow:NO];
+    }
 }
 
 
@@ -310,8 +291,6 @@ typedef enum {
 - (void) dealloc 
 {
     self.cell = nil;
-    
-    [super dealloc];
 }
 
 - (id) initWithFrame:(CGRect)frame behavior:(CellBackgroundBehavior)bbehavior 
@@ -353,8 +332,6 @@ typedef enum {
     self.customBackgroundColor = nil;
     self.gradientStartColor = nil;
     self.gradientEndColor = nil;
-    
-    [super dealloc];
 }
 
 - (void)initializeVars
@@ -384,13 +361,11 @@ typedef enum {
                                                                                   behavior:CellBackgroundBehaviorNormal];
         bg.cell = self;
         self.backgroundView = bg;
-        [bg release];
         
         bg = [[PrettyTableViewCellBackground alloc] initWithFrame:self.frame
                                                       behavior:CellBackgroundBehaviorSelected];
         bg.cell = self;
         self.selectedBackgroundView = bg;
-        [bg release];
         
         [self initializeVars];
     }
@@ -488,10 +463,6 @@ typedef enum {
 
 - (void) setTableViewBackgroundColor:(UIColor *)aBackgroundColor 
 {
-    [aBackgroundColor retain];
-    if (tableViewBackgroundColor != nil) {
-        [tableViewBackgroundColor release];
-    }
     tableViewBackgroundColor = aBackgroundColor;
     
     self.backgroundView.backgroundColor = aBackgroundColor;
@@ -565,7 +536,7 @@ typedef enum {
     maskLayer.frame = maskRect;
     maskLayer.path = maskPath.CGPath;
 
-    return [maskLayer autorelease];
+    return maskLayer;
 }
 
 - (BOOL) dropsShadow 
@@ -575,12 +546,20 @@ typedef enum {
 
 - (float) cornerRadius
 {
-    return [self tableViewIsGrouped] ? cornerRadius : 0;
+    if ([self tableViewIsGrouped]) {
+        return cornerRadius;
+    }
+    
+    return 0;
 }
 
 - (UIColor *) backgroundColor 
 {
-    return customBackgroundColor ? customBackgroundColor : [super backgroundColor];
+    if (customBackgroundColor) {
+        return customBackgroundColor;
+    }
+    
+    return [super backgroundColor];
 }
 
 - (CGGradientRef) createSelectionGradient
@@ -590,7 +569,7 @@ typedef enum {
     NSArray *colors = [NSArray arrayWithObjects:(id)self.selectionGradientStartColor.CGColor, (id)self.selectionGradientEndColor.CGColor, nil];
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     CGGradientRef gradient = CGGradientCreateWithColors(colorSpace, 
-                                                        (CFArrayRef) colors, locations);
+                                                        (__bridge CFArrayRef) colors, locations);
     CGColorSpaceRelease(colorSpace);
     
     return gradient;
@@ -603,12 +582,11 @@ typedef enum {
     NSArray *colors = [NSArray arrayWithObjects:(id)self.gradientStartColor.CGColor, (id)self.gradientEndColor.CGColor, nil];
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     CGGradientRef gradient = CGGradientCreateWithColors(colorSpace, 
-                                                        (CFArrayRef) colors, locations);
+                                                        (__bridge CFArrayRef) colors, locations);
     CGColorSpaceRelease(colorSpace);
     
     return gradient;
 }
-
 
 
 @end
